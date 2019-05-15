@@ -1,15 +1,42 @@
+import numpy as np
+
+
 class Bayes:
-    def getResult(self, muestra):
-        return muestra
+    def __init__(self, muestras, clases):
+        self.muestras = muestras
+        self.clases = clases
+        self.m = []
+
+        for clase in muestras:
+            arr = []
+            for i in range(len(clase[0])):
+                cont = 0
+                for caso in clase:
+                    cont = cont + caso[i]
+                arr.append(cont/len(clase[0]))
+            self.m.append(arr)
+
+        restas = []
+        for clase in muestras:
+            c = []
+            for muestra in clase:
+                arr = []
+                for elem in muestra:
+
+
+
+    def getResult(self, datos):
+        return datos
 
 
 class Fuzzy:
-    def __init__(self, tolerancia=0.01, peso=2):
+    def __init__(self, muestra, tolerancia=0.01, peso=2):
         self.tolerancia = tolerancia
         self.peso = peso
+        self.muestra = muestra
 
-    def getResult(self, muestra):
-        return muestra
+    def getResult(self, datos):
+        return datos
 
 
 class Controlador:
@@ -26,31 +53,46 @@ class Controlador:
         for linea in lineas:
             terminos = linea.strip('\n').split(',')
 
-            if terminos[-1] not in self.tipos:
-                self.tipos.append(terminos[-1])
+            clase = terminos[-1]
+            del terminos[-1]
 
-            self.muestras.append(terminos)
+            arr = []
+            for item in terminos:
+                arr.append(int(item))
 
+            if clase not in self.tipos:
+                self.tipos.append(clase)
+                self.muestras.append([arr])
+            else:
+                self.muestras[self.tipos.index(clase)].append(arr)
 
     def loaded(self):
         return self.muestras is not None
 
-    def go(self, algorithm):
+    def getClass(self, algorithm, filename):
+        file = open(filename, "r")
+        data = file.read().strip('\n').split(',')
+
+        try:
+            return self.go(algorithm, data)
+        except Exception as e:
+            print(e)
+
+    def go(self, algorithm, data):
         alg = None
 
-        if algorithm.equals("Fuzzy"):
-            alg = Fuzzy()
-        elif algorithm.equals("Bayes"):
-            alg = Bayes()
+        if algorithm == "Fuzzy":
+            alg = Fuzzy(self.muestras, self.tipos)
+        elif algorithm == "Bayes":
+            alg = Bayes(self.muestras, self.tipos)
 
-        return alg.getResult(self.muestras)
+        return alg.getResult(data)
 
 
 if __name__ == "__main__":
     controlador = Controlador()
-    controlador.loadData("Iris2Clases")
+    controlador.loadData("Iris2Clases.txt")
 
     if controlador.loaded():
-        clasificacion = controlador.go("Fuzzy")
+        clasificacion = controlador.getClass("Fuzzy", "TestIris01.txt")
         print(clasificacion)
-
