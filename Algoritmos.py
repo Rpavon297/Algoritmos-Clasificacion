@@ -8,14 +8,19 @@ from matplotlib.backends.backend_qt4agg import (
 
 import numpy as np
 from PyQt5 import uic, QtGui
-from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QCheckBox, QButtonGroup
+from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QCheckBox, QButtonGroup, QSpinBox, \
+    QLabel, QVBoxLayout
 
 
-class Bayes:
-    def __init__(self, muestras, clases):
-        self.muestras = muestras
-        self.clases = clases
-        self.m = []
+class Algoritmo:
+    def __init__(self, muestra, tolerancia=0.01, peso=2):
+        self.tolerancia = tolerancia
+        self.peso = peso
+        self.muestra = muestra
+
+    def bayes(self, muestras, clases):
+
+        m = []
 
         for clase in muestras:
             arr = []
@@ -24,7 +29,7 @@ class Bayes:
                 for caso in clase:
                     cont = cont + caso[i]
                 arr.append(cont / len(clase[0]))
-            self.m.append(arr)
+            m.append(arr)
 
         restas = []
         for clase in muestras:
@@ -33,16 +38,6 @@ class Bayes:
                 arr = []
                 for elem in muestra:
                     print("")
-
-    def getResult(self, datos):
-        return datos
-
-
-class Kmedias:
-    def __init__(self, muestra, tolerancia=0.01, peso=2):
-        self.tolerancia = tolerancia
-        self.peso = peso
-        self.muestra = muestra
 
     def distEuc(self, x, y):
         res = 0
@@ -55,12 +50,6 @@ class Kmedias:
     def getResult(self, datos):
         return datos
 
-
-qtCreatorFile = "plot.ui"
-
-Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
-
-
 class MyApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -69,6 +58,9 @@ class MyApp(QMainWindow):
         self.title = 'Clasificador múltiple-Roberto Pavón Benítez'
         self.width = 1000
         self.height = 650
+
+        self.indx=0
+        self.indy=1
 
         self.file = "Iris2Clases.txt"
         self.muestras = None
@@ -81,34 +73,46 @@ class MyApp(QMainWindow):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
+
         button = QPushButton('Cargar', self)
         button.setToolTip('Carga los datos en la tabla')
         button.move(780, 100)
-        button.resize(140, 100)
+        button.resize(140, 40)
         button.clicked.connect(self.initPlot)
 
-        self.bg = []
-        for i, clase in enumerate(self.muestras[0][0]):
-            self.cb = QCheckBox("Atributo {}".format(str(i)), self)
-            self.bg.append(self.cb)
-            self.cb.stateChanged.connect(self.changeAtt)
-            self.cb.move(760, 220 + i*20)
-            self.cb.resize(320, 40)
+        self.spx = QSpinBox(self)
+        self.spx.setMinimum(1)
+        self.spx.setMaximum(4)
+        self.spx.setValue(1)
+        self.spx.move(850,285)
+        self.spx.resize(40, 20)
+        self.spx.valueChanged.connect(self.changeX)
+
+
+        self.spy = QSpinBox(self)
+        self.spy.setMinimum(1)
+        self.spy.setMaximum(4)
+        self.spy.setValue(2)
+        self.spy.move(900,285)
+        self.spy.resize(40, 20)
+        self.ly = QLabel("Atributos en los ejes: ",self)
+        self.ly.move(730, 280)
+        self.spy.valueChanged.connect(self.changeY)
 
         self.m = PlotCanvas(self, width=7, height=6, muestras=self.muestras, index1=0, index2=1)
         self.m.move(0, 0)
 
         self.show()
 
-    def changeAtt(self,state):
-        print("boop")
+    def changeX(self):
+        self.indx = self.spx.value()-1
+
+    def changeY(self):
+        self.indy = self.spy.value()-1
 
     def initPlot(self):
 
-        index1 = 1
-        index2 = 2
-
-        self.m.resetPlot(index1,index2)
+        self.m.resetPlot(self.indx,self.indy)
 
         self.show()
 
@@ -149,15 +153,12 @@ class MyApp(QMainWindow):
             print(e)
 
     def go(self, algorithm, data):
-        alg = None
+        alg = Algoritmo(self.muestras, self.tipos)
 
-        if algorithm == "Fuzzy":
-            alg = Kmedias(self.muestras, self.tipos)
-        elif algorithm == "Bayes":
-            alg = Bayes(self.muestras, self.tipos)
+        if algorithm == "Bayes":
+            alg.bayes(self.muestras, self.tipos)
 
         return alg.getResult(data)
-
 
 class PlotCanvas(FigureCanvas):
 
@@ -196,7 +197,6 @@ class PlotCanvas(FigureCanvas):
 
         self.plot(clases)
 
-
     def plot(self, clases):
         colores = ['r', 'g', 'b', 'c', 'm', 'y']
 
@@ -222,12 +222,3 @@ if __name__ == '__main__':
     ex = MyApp()
     sys.exit(app.exec_())
 
-"""
-if __name__ == "__main__":
-    controlador = Controlador()
-    controlador.loadData("Iris2Clases.txt")
-
-    if controlador.loaded():
-        clasificacion = controlador.getClass("Fuzzy", "TestIris01.txt")
-        print(clasificacion)
-"""
