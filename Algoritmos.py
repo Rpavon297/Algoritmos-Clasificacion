@@ -12,7 +12,7 @@ from matplotlib.backends.backend_qt4agg import (
 import numpy as np
 from PyQt5 import uic, QtGui
 from PyQt5.QtWidgets import QApplication, QMainWindow, QSizePolicy, QPushButton, QCheckBox, QButtonGroup, QSpinBox, \
-    QLabel, QVBoxLayout, QFileDialog, QComboBox, QDoubleSpinBox, QFrame
+    QLabel, QVBoxLayout, QFileDialog, QComboBox, QDoubleSpinBox, QFrame, QTableWidget, QTableWidgetItem
 
 
 class Algoritmo:
@@ -38,6 +38,12 @@ class Algoritmo:
         for clase in self.muestras:
             self.C.append(self.resumir(clase))
 
+        self.centros = []
+        for clase in self.C:
+            linea = []
+            for atributo in clase:
+                linea.append(atributo[0])
+            self.centros.append(linea)
 
         return self.centros
 
@@ -203,7 +209,7 @@ class MyApp(QMainWindow):
         self.left = 200
         self.top = 200
         self.title = 'Clasificador múltiple-Roberto Pavón Benítez'
-        self.width = 1000
+        self.width = 1350
         self.height = 620
 
         self.indx = 0
@@ -217,6 +223,7 @@ class MyApp(QMainWindow):
         self.sol = None
 
         self.initUI()
+
 
     def initUI(self):
         fuente = QtGui.QFont("Times", 10, QtGui.QFont.Bold)
@@ -248,6 +255,8 @@ class MyApp(QMainWindow):
 
         self.titulo = QLabel("Clasificador", self)
         self.titulo.move(820,20)
+        self.titulo2 = QLabel("Vista de tabla", self)
+        self.titulo2.move(1125, 20)
 
         self.spx = QSpinBox(self)
         self.spx.setMinimum(1)
@@ -319,13 +328,13 @@ class MyApp(QMainWindow):
         self.button.resize(130, 40)
         self.button.clicked.connect(self.fileCargar)
 
-        self.button2 = QPushButton('Clasificar', self)
+        self.button2 = QPushButton('Clasificar desde archivo', self)
         self.button2.setToolTip('Ejecuta el programa')
         self.button2.move(850, 500)
         self.button2.resize(130, 40)
+        self.button2.setEnabled(False)
         self.button2.clicked.connect(self.fileClasificar)
 
-        self.loadData()
         self.m = PlotCanvas(self, width=7, height=6, muestras=self.muestras, index1=0, index2=1, tipos=self.tipos)
         self.m.move(0, 0)
 
@@ -345,13 +354,78 @@ class MyApp(QMainWindow):
         self.output2.move(860, 428)
         self.output2.resize(200, 40)
 
+        self.tabla = QTableWidget(self)
+        self.tabla.move(1020, 60)
+        self.tabla.resize(300,350)
+
+        self.tablainput = QTableWidget(self)
+        self.tablainput.move(1020, 430)
+        self.tablainput.resize(300,60)
+
+        self.botonc = QPushButton("Cargar esta muestra", self)
+        self.botonc.move(1020, 510)
+        self.botonc.resize(300,30)
+        self.botonc.setEnabled(False)
+        self.botonc.clicked.connect(self.desdeTabla)
+
+        self.error = QLabel("Rellene todos los campos", self)
+        self.error.move(1105, 540)
+        self.error.resize(500,40)
+        self.error.setStyleSheet("color: red")
+        self.error.hide()
+
         self.output.setFont(fuente)
         self.output2.setFont(fuente)
         self.resultado.setFont(fuente)
         self.pertenencia.setFont(fuente)
         self.titulo.setFont(fuente)
+        self.titulo2.setFont(fuente)
 
         self.show()
+
+    def desdeTabla(self):
+        try:
+            self.error.hide()
+            muestra = []
+            for i in range(self.tablainput.columnCount()):
+                muestra.append(float(self.tablainput.item(0,1).text()))
+
+            alg = Algoritmo(self.muestras, self)
+
+            if str(self.algoritmos.currentText()) == "K-medias":
+                alg.setK(self.input1.value(), self.input2.value())
+                self.centros = alg.kmedias()
+            if str(self.algoritmos.currentText()) == "Lloyd":
+                alg.setL(self.input1.value(), self.input2.value(), self.input3.value())
+                self.centros = alg.lloyd()
+            if str(self.algoritmos.currentText()) == "Bayes":
+                self.centros = alg.bayes()
+
+            self.sol = muestra
+            self.res = alg.clasificar(muestra)
+            self.mostrarSol(self.muestras, self.centros, muestra)
+        except Exception as e:
+            self.error.show()
+
+
+    def mostrarTabla(self, array):
+        self.button2.setEnabled(True)
+        self.botonc.setEnabled(True)
+
+        self.tabla.setColumnCount(len(array[0]))
+        self.tabla.setRowCount(len(array))
+
+        self.tablainput.setColumnCount(len(array[0])-1)
+        self.tablainput.setRowCount(1)
+        self.tablainput.setHorizontalHeaderLabels([])
+        self.tablainput.setVerticalHeaderLabels([])
+
+        for i, fila in enumerate(array):
+            for j, atributo in enumerate(fila):
+                self.tabla.setItem(i,j,QTableWidgetItem(atributo))
+
+        self.tabla.resizeColumnsToContents()
+        self.tablainput.resizeColumnsToContents()
 
     def actualizarInputs(self, value):
         if value == "K-medias":
@@ -420,7 +494,8 @@ class MyApp(QMainWindow):
                                                 "Normal text file (*.txt)", options=options)
         if nombre:
             self.file = nombre
-            self.loadData()
+            datos = self.loadData()
+            self.mostrarTabla(datos)
             self.initPlot()
             self.button2.setEnabled(True)
 
@@ -440,7 +515,7 @@ class MyApp(QMainWindow):
         self.indy = self.spy.value() - 1
 
     def initPlot(self):
-        self.m.resetPlot(self.indx, self.indy)
+        self.m.resetPlot(self.indx, self.indy, self.muestras)
         self.m.plotC(self.centros)
         if self.sol is not None:
             self.m.plotS(self.sol)
@@ -448,6 +523,7 @@ class MyApp(QMainWindow):
         self.show()
 
     def loadData(self):
+        sinClas = []
         self.muestras = []
         self.tipos = []
         file = open(self.file, "r")
@@ -455,6 +531,11 @@ class MyApp(QMainWindow):
 
         for linea in lineas:
             terminos = linea.strip('\n').split(',')
+
+            nlinea = []
+            for item in terminos:
+                nlinea.append(item)
+            sinClas.append(nlinea)
 
             clase = terminos[-1]
             del terminos[-1]
@@ -468,6 +549,7 @@ class MyApp(QMainWindow):
                 self.muestras.append([arr])
             else:
                 self.muestras[self.tipos.index(clase)].append(arr)
+        return sinClas
 
     def actualizar(self, clases, centros):
         self.m.plot(clases)
@@ -485,10 +567,7 @@ class MyApp(QMainWindow):
 
         self.m.plot(extrac)
         self.m.plotC(centros)
-        isbayes = True
-        if self.centros:
-            isbayes = False
-        self.m.plotS(pred,isbayes)
+        self.m.plotS(pred)
 
         self.output.setText(self.tipos[self.res[0]])
         self.output2.setText(str(round(self.res[1], 4)))
@@ -574,7 +653,8 @@ class PlotCanvas(FigureCanvas):
     def actPlot(self):
         self.fig.canvas.draw_idle()
 
-    def resetPlot(self, index1, index2):
+    def resetPlot(self, index1, index2, muestras):
+        self.muestras = muestras
         self.index1 = index1
         self.index2 = index2
         clases = []
@@ -592,31 +672,19 @@ class PlotCanvas(FigureCanvas):
             self.ax.scatter(centro[self.index1], centro[self.index2], marker="x", c='#050505')
         self.draw()
 
-    def plotS(self, prediccion, isbayes):
+    def plotS(self, prediccion):
         self.ax.scatter(prediccion[self.index1], prediccion[self.index2], c='b')
 
         self.ax.set_title('Muestras')
-        if isbayes:
-            if len(self.tipos) == 2:
-                self.ax.legend((self.tipos[0], self.tipos[1]))
-            if len(self.tipos) == 3:
-                self.ax.legend((self.tipos[0], self.tipos[1], self.tipos[2]))
-            if len(self.tipos) == 4:
-                self.ax.legend((self.tipos[0], self.tipos[1], self.tipos[2], self.tipos[3]))
-            if len(self.tipos) == 5:
-                self.ax.legend(
-                    (self.tipos[0], self.tipos[1], self.tipos[2], self.tipos[3], self.tipos[4]))
-
-        else:
-            if len(self.tipos) == 2:
-                self.ax.legend((self.tipos[0], self.tipos[1], "Centros"))
-            if len(self.tipos) == 3:
-                self.ax.legend((self.tipos[0], self.tipos[1], self.tipos[2], "Centros"))
-            if len(self.tipos) == 4:
-                self.ax.legend((self.tipos[0], self.tipos[1], self.tipos[2], self.tipos[3], "Centros"))
-            if len(self.tipos) == 5:
-                self.ax.legend(
-                    (self.tipos[0], self.tipos[1], self.tipos[2], self.tipos[3], self.tipos[4], "Centros"))
+        if len(self.tipos) == 2:
+            self.ax.legend((self.tipos[0], self.tipos[1], "Centros"))
+        if len(self.tipos) == 3:
+            self.ax.legend((self.tipos[0], self.tipos[1], self.tipos[2], "Centros"))
+        if len(self.tipos) == 4:
+            self.ax.legend((self.tipos[0], self.tipos[1], self.tipos[2], self.tipos[3], "Centros"))
+        if len(self.tipos) == 5:
+            self.ax.legend(
+                (self.tipos[0], self.tipos[1], self.tipos[2], self.tipos[3], self.tipos[4], "Centros"))
         self.draw()
 
     def plot(self, clases):
