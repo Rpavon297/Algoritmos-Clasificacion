@@ -35,6 +35,7 @@ class Algoritmo:
 
     def bayes(self):
         self.C = []
+
         for clase in self.muestras:
             self.C.append(self.resumir(clase))
 
@@ -44,6 +45,10 @@ class Algoritmo:
             for atributo in clase:
                 linea.append(atributo[0])
             self.centros.append(linea)
+
+        for linea in self.C:
+            print(linea)
+
 
         return self.centros
 
@@ -226,9 +231,10 @@ class MyApp(QMainWindow):
 
 
     def initUI(self):
-        fuente = QtGui.QFont("Times", 10, QtGui.QFont.Bold)
+        fuente = QtGui.QFont("Times", self.width/130.5, QtGui.QFont.Bold)
+        fuenten = QtGui.QFont("Times", self.width / 163.5)
         self.setWindowTitle(self.title)
-        #self.setGeometry(self.left, self.top, self.width, self.height)
+        self.setGeometry(self.left, self.top, self.width, self.height)
         self.setFixedSize(self.width,self.height)
 
         self.back = QFrame(self)
@@ -258,14 +264,18 @@ class MyApp(QMainWindow):
         self.titulo2 = QLabel("Vista de tabla", self)
         self.titulo2.move(1125, 20)
 
+        self.lpx = QLabel("X:", self)
+        self.lpx.move(850,65)
         self.spx = QSpinBox(self)
         self.spx.setMinimum(1)
         self.spx.setMaximum(4)
         self.spx.setValue(1)
-        self.spx.move(870, 70)
+        self.spx.move(863, 70)
         self.spx.resize(40, 20)
         self.spx.valueChanged.connect(self.changeX)
 
+        self.lpy = QLabel ("Y:",self)
+        self.lpy.move(910,65)
         self.spy = QSpinBox(self)
         self.spy.setMinimum(1)
         self.spy.setMaximum(4)
@@ -317,8 +327,8 @@ class MyApp(QMainWindow):
         self.solucion.setStyleSheet("background-color: #D5D5D5")
 
         self.button = QPushButton('Mostrar', self)
-        self.button.setToolTip('Carga los datos en la tabla')
-        self.button.move(790, 125)
+        self.button.setToolTip('Cambia los atributos mostrados')
+        self.button.move(784, 125)
         self.button.resize(140, 30)
         self.button.clicked.connect(self.initPlot)
 
@@ -362,7 +372,7 @@ class MyApp(QMainWindow):
         self.tablainput.move(1020, 430)
         self.tablainput.resize(300,60)
 
-        self.botonc = QPushButton("Cargar esta muestra", self)
+        self.botonc = QPushButton("Clasificar esta muestra", self)
         self.botonc.move(1020, 510)
         self.botonc.resize(300,30)
         self.botonc.setEnabled(False)
@@ -374,6 +384,7 @@ class MyApp(QMainWindow):
         self.error.setStyleSheet("color: red")
         self.error.hide()
 
+        self.setFont(fuenten)
         self.output.setFont(fuente)
         self.output2.setFont(fuente)
         self.resultado.setFont(fuente)
@@ -388,7 +399,7 @@ class MyApp(QMainWindow):
             self.error.hide()
             muestra = []
             for i in range(self.tablainput.columnCount()):
-                muestra.append(float(self.tablainput.item(0,1).text()))
+                muestra.append(float(self.tablainput.item(0,i).text()))
 
             alg = Algoritmo(self.muestras, self)
 
